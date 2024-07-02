@@ -1,22 +1,37 @@
-# Introduction
+Adapting Acerola FX's ASCII shader suite to pre-rendering video clips as ASCII animations for web assets. 
+
+# Workflow 
+How to apply the shader to each frame of the video.
+
+* Download the video: use yt-dlp `yt-dlp [VIDEO_URL] -o input_video.mp4`
+* Extract frames: use ffmpeg to extract frames from the video `ffmpeg -i input_video.mp4 -vf fps=30 frame%04d.png`
+* Set up rendering environment: use a graphics programming environment that can use HLSL shaders. Some options would be: a) DirectX-based application, b) Unity game engine
+* Apply shader to frames:
+    * Load each frame as a texture
+    * Apply the ASCII shader
+    * Save the resulting image
+* Compile processed frames: use ffmpeg to compile the processed images back into a video `ffmpeg -framerate 30 -i processed_frame%04d.png -c:v libx264 -pix_fmt yuv420p output_ascii.mp4`
+
+# Transcript
+## Introduction
 
 Back in the golden era of gaming, the 2000s, if you wanted help with a game, you would consult GameFAQs. These guides had a culture of fancy artistic headers composed of only text, a graphic design technique known as ASCII Art. If you're around my age, these GameFAQs guides may have been your first introduction to ASCII Art, but the technique goes all the way back to 1966 and even further back to 1867 if you include typewriters.
 
-# The Future of ASCII Art in Gaming
+## The Future of ASCII Art in Gaming
 
 But what I'm thinking about is the future. Could we render a game as ASCII Art? And if we did, would it even look good? Would it even be playable? Today, we'll be turning characters into characters. As far as I'm aware, there aren't any games that use an ASCII Art Shader for its main art direction, but some games have basic ASCII Art Shaders available in their photo mode, such as Returnal.
 
-# Issues with Current ASCII Art Shaders
+## Issues with Current ASCII Art Shaders
 
 Returnal's ASCII Art Shader is what inspired me, because quite frankly, it doesn't look very good. While it does accomplish the simple task of converting the image to text, so much detail is lost that everything becomes formless blobs, requiring your brain to fill in a lot of information that is now absent. To mitigate this loss of detail, the shader uses the underlying image to color the overlaid text characters, which helps a bit to separate the shapes from each other, but I think it looks kind of ugly and deviates too far from the traditionally monochromatic style of ASCII Art.
 
-# Enhancing the ASCII Art Shader
+## Enhancing the ASCII Art Shader
 
 Unfortunately, this loss of detail is a requirement for the shader, so we must rely on the characters alone to communicate as much detail as possible. If we compare the Returnal ASCII Shader to some real ASCII Art, we can see one pretty big difference: defined contour constructed with slashes, underscores, and vertical bars to communicate edge flow and visual boundaries. If Returnal had these edge lines, then the formless blob dilemma would be solved. But is it possible to make a shader that draws edges with the proper ASCII characters?
 
-# Creating a Custom ASCII Art Shader
+## Creating a Custom ASCII Art Shader
 
-## The Basic ASCII Shader
+### The Basic ASCII Shader
 
 Before we get to the fancy edges, we need to recreate the basic Returnal ASCII shader which forms the foundation of the effect. So, how does Returnal convert this base image into text? First, we need to decide on the size of our text characters or the area that they will take up. In order to conserve as much image detail as we can, we want our characters to be as small as possible but just big enough to be legible. For some reason, Returnal uses 10x10 characters, which is pretty strange for reasons that'll make more sense later. I chose to go with 8x8 characters because it's a pleasant power of 2 and it's what I found to be the smallest possible resolution for legible text.
 
@@ -28,7 +43,7 @@ To do this, we need a texture that contains the text. We want our text to commun
 
 While it certainly looks cool already, it's kind of just a glorified halftoning shader, even though it's technically all text. To fix this, I wanted to try adding those edge lines, but how do we even start with something like that?
 
-## Adding Edge Detection
+### Adding Edge Detection
 
 Before we try to solve the edge problem, let's clarify what exactly we need. Just edges alone won't satisfy the needs of the ASCII shader. We also need to draw the edge with the proper symbol that conforms to the contour. For example, a flat edge should be drawn with an underscore, a vertical edge should be drawn with a vertical bar, and for angled edges, we should use the corresponding slash. This means we don't just need edge data, we also need to know the angle of the edge, which makes things a bit more complicated.
 
@@ -36,7 +51,7 @@ I've presented numerous edge detection methods in my previous videos already, so
 
 As you can see, there is only change detected along the border of our circle, with no change on the flat color areas. Since these are vectors in two-dimensional space, we can get the angle of the vector with the wonderful ATAN2 function, giving us an angle between negative pi and pi, which we can convert to 0 to 1 for simplicity. We now have the same problem we had earlier with the luminance: there's a lot more angle values than there are edge ASCII characters, so we again want to reduce the possible angle results to four values. Then, we downscale the image to the size of the ASCII characters like before, and use the quantized angle as the texture coordinate for the edge ASCII texture, and we have amazing ASCII edges.
 
-# Enhancing the Edge Detection
+## Enhancing the Edge Detection
 
 It works! Kind of. The edges may be lackluster, but the proof of concept is there. The edges follow the contour of the original image. Unfortunately, we can hardly call these edges though. There's just too many gaps and holes in the edge line, which is unacceptable for a simple circle example. Our shader should be able to draw a circle just fine. Using the GPU to downscale and upscale the quantized angle buffer results in poorly conserved edges. Clearly, we'd like a little more control over the output to keep the downscaled edges as cohesive as possible.
 
@@ -44,30 +59,30 @@ To get that control, we can use a handy dandy compute shader. As a quick review,
 
 I did this by having each thread determine which kind of edge its pixel is, writing that to group shared memory. Then the first thread of the group would scan the group shared memory using the identified edge as an index for another array, adding to that spot in the array. Afterwards, it would find the max value in that array and use that as the edge that fills the downscaled pixel. Basically, we're constructing a local histogram of the edge data to figure out which kind of edge is most common in the 8x8 tile, and using that as the simplified edge output. I added a threshold parameter so that the tile needs a certain amount of edge pixels within it to be counted as an edge, and the result is a downscaled edge buffer that has far more cohesive edge lines than the original GPU downscaled. The circle is pretty much perfectly converted into edges that follow the contour, but what about a more complicated picture? Yeah, that looks pretty bad.
 
-# Improving Edge Quality
+## Improving Edge Quality
 
 This is because our Sobel filter isn't actually edge detecting. To convert the Sobel filter into an edge detector, we have to threshold the magnitude of the gradient. Essentially, if a high change is detected, then it's an edge; otherwise, it's not. This fixes the render, but the problem with this is that the edges look like complete ass. The Sobel filter is not meant to produce aesthetically pleasing edges; it's meant to extract features for data analysis. We can fix this by adding another pre-processing step to our effect. With a simple difference of Gaussians, we can extract high-frequency details of the image in a way that looks more pleasant, and then run the Sobel filter on that for edge direction data. As you can see, the difference of Gaussians edge lines looks far better than the Sobel filter edges. In another video of mine, I demonstrated how the difference of Gaussians can be used for a wide variety of different art styles just by itself. But here it takes a backseat as a simple pre-processing step to improve the visuals and reliability of the ASCII shader.
 
-# Finalizing the ASCII Shader
+## Finalizing the ASCII Shader
 
 Now all we have to do is layer the edges on top of the base ASCII pass, and the Ace Rola ASCII shader is all finished. This is about as far as we can take the ASCII shader from a pure image processing standpoint, but these few example renders show the promise of the effect. Static images are kind of boring though; I wanted to see the effect in motion, so I implemented what we have so far as a reshade shader so we can use the effect on some games. Thankfully, we can make the effect look even cooler in a 3D context.
 
-# Testing the Shader in Games
+## Testing the Shader in Games
 
 Over in Final Fantasy XIV, the effect looks exactly the same, because it would be weird if it didn't, but we can see that in motion the edges stay visually cohesive over time and it looks surprisingly really good. In a 3D context, we can make the edges even more reliable by checking for substantial differences in depth and normal values on neighboring pixels, which will add some more edge lines that the difference of Gaussian fails to capture. This makes the clothing of my character look a lot better, so it's definitely worth the extra edge detection step.
 
-# Addressing Eye Fatigue
+## Addressing Eye Fatigue
 
 One significant issue with the shader though is that the high contrast causes eye fatigue pretty quickly. Staring at this effect for a while just does not feel good, especially when you're walking around and trying to actually parse the visual information. Because of this, the ASCII shader is probably best left as a photo mode effect like how Returnal uses it, but there are some things we can do to remedy the eye fatigue. The color of the ASCII letters and the background can be easily controlled; instead of using black and white, we can use a lower contrast color combo. Another idea I had was to fade the letters out based on depth, which I think looks pretty good and could make it more useful for an actual game. The last option I added was for not drawing edges after a certain distance, which has a sort of depth of field effect. At this point, I was satisfied with the effect and didn't need anything more. It also runs pretty fast already, so we don't need to do any real optimizing.
 
-# Experimenting with Different Effects
+## Experimenting with Different Effects
 
 So now we can experiment with the shader and see what effects it looks good with, as well as where the shader looks good and where it looks bad. We've looked at Final Fantasy a lot, so let's look at something a bit more modern, Elden Ring, and see how the ASCII shader handles some more complex visuals. Because ASCII Art is a computer thing, it's probably best combined with other effects that evoke tech aesthetics. You could go the retro route with color quantization to try and improve the colored ASCII art from Returnal, then layer a CRT filter on top, and we already have a trendy indie game filter that would go crazy on Reddit. You could keep it minimalist and try to make the game look like it's printed in the command prompt, which really is just the base ASCII shader already with different colors.
 
-# Advanced Visual Effects
+## Advanced Visual Effects
 
 I wanted to go the epic neon cyberpunk route though, because the ASCII shader is just asking to be bloomed. I didn't want it to look like it's glowing, I wanted it to look burnt, so I added some tone mapping to increase the contrast, sharpened it to make it crispier, and then color burnt the image. I really like how this looks, and it makes me think of Deus Ex for some reason. With some creative framing and vignettes, you can make the game look even more novel. This would look pretty cool for like a point-and-click adventure game. The shader looks pretty nice on people; the edge detection makes hair look really cool, and I particularly love how eyes look with the shader applied.
 
-# Limitations and Challenges
+## Limitations and Challenges
 
 But when does the shader not work? You've probably noticed that all my example photos have been close-ups or very zoomed in. This is because the effect looks best at this close distance. When you zoom out, the ASCII characters get a lot noisier and everything jumbles together. Stuff like faces at this distance are impossible to convert to ASCII because, remember, we are losing this much detail no matter what. But the edges do help identify separate shapes, so with the depth follow I mentioned earlier, the game isn't entirely unplayable. If you were to further separate entities with flat colors, you could probably create some cool Tron or super hot like visuals.
