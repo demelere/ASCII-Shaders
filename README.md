@@ -15,13 +15,18 @@ How to apply the shader to each frame of the video.
     * Vulkan may be too complex?  Initializing the project involves creating Vulkan headers and libraries, instance, device, and setting up pipeline, then rewriting shader code in GLSL or SPIR-V or compiling GLSL to SPIR-V.  
     * Custom C++ Open GL application to load images, apply the shader, and save the output?
     * OR use WebGL and WASM to render the ASCII animation as a series of textures in a WebGL context (on a canvas)
-* Apply shader to frames:
+* Use Processing sketch to apply shader to frames:
     * Load each frame as a texture
     * Apply the ASCII shader
     * Save the resulting image
 
 * Compile processed frames: use ffmpeg to compile the processed images back into a video `ffmpeg -framerate 30 -i processed_frame%04d.png -c:v libx264 -pix_fmt yuv420p output_ascii.mp4`
 
+* GLSL shader file `ascii_shader.glsl`
+* Processing main sketch `ascii_video_generator.pde`
+* ASCII texture generation `ascii_texture_generator.pde`
+* `ascii_config.json`
+* Create bash scripts
 
 # Transcript
 ## Introduction
