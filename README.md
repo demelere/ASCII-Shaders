@@ -5,7 +5,12 @@ How to apply the shader to each frame of the video.
 
 * Download the video: use yt-dlp `yt-dlp [VIDEO_URL] -o input_video.mp4`
 * Extract frames: use ffmpeg to extract frames from the video `ffmpeg -i input_video.mp4 -vf fps=30 frame%04d.png`
-* Set up rendering environment: use a graphics programming environment that can use HLSL shaders. Some options would be: a) DirectX-based application, b) Unity game engine
+* Set up rendering environment: need a graphics programming environment that supports shader programming and apply HLSL shaders to images. Some options would be: 
+    * DirectX-based application (HLSL is typically used with DirectX).  But DirectX only has native support in Windows, unless you use Wine or DirectX-to-OpenGL.
+    * Unity game engine (with shader support)
+    * GLSL shaders can be used with OpenGL, which is well-supported on macOS.  Use OpenGL Processing framework
+    * Vulkan may be too complex?  Initializing the project involves creating Vulkan headers and libraries, instance, device, and setting up pipeline, then rewriting shader code in GLSL or SPIR-V or compiling GLSL to SPIR-V.  
+    * Custom C++ Open GL application to load images, apply the shader, and save the output?
 * Apply shader to frames:
     * Load each frame as a texture
     * Apply the ASCII shader
