@@ -9,13 +9,19 @@ How to apply the shader to each frame of the video.
     * DirectX-based application (HLSL is typically used with DirectX).  But DirectX only has native support in Windows, unless you use Wine or DirectX-to-OpenGL.
     * Unity game engine (with shader support)
     * GLSL shaders can be used with OpenGL, which is well-supported on macOS.  Use OpenGL Processing framework
+        * use glslCanvas to run standalone GLSL shaders directly in HTML elements
+        * use Three.js to handle 2D graphics and shaders
+        * adapt OpenFrameworks and SFML for web via WebAssembly
     * Vulkan may be too complex?  Initializing the project involves creating Vulkan headers and libraries, instance, device, and setting up pipeline, then rewriting shader code in GLSL or SPIR-V or compiling GLSL to SPIR-V.  
     * Custom C++ Open GL application to load images, apply the shader, and save the output?
+    * OR use WebGL and WASM to render the ASCII animation as a series of textures in a WebGL context (on a canvas)
 * Apply shader to frames:
     * Load each frame as a texture
     * Apply the ASCII shader
     * Save the resulting image
+
 * Compile processed frames: use ffmpeg to compile the processed images back into a video `ffmpeg -framerate 30 -i processed_frame%04d.png -c:v libx264 -pix_fmt yuv420p output_ascii.mp4`
+
 
 # Transcript
 ## Introduction
