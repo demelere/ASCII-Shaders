@@ -3,8 +3,8 @@ Adapting Acerola FX's ASCII shader suite to pre-rendering video clips as ASCII a
 # Workflow 
 How to apply the shader to each frame of the video.
 
-* Download the video: use yt-dlp `yt-dlp [VIDEO_URL] -o input_video.mp4`
-* Extract frames: use ffmpeg to extract frames from the video `ffmpeg -i input_video.mp4 -vf fps=30 frame%04d.png`
+* Download the video: use yt-dlp `yt-dlp "url" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" -o "name.mp4" `
+* Extract frames: use ffmpeg to extract frames from a video called "name" `ffmpeg -i name.mp4 -vf fps=30 data/frame%04d.png` into a directory called `data`
 * Set up rendering environment: need a graphics programming environment that supports shader programming and apply HLSL shaders to images. Some options would be: 
     * DirectX-based application (HLSL is typically used with DirectX).  But DirectX only has native support in Windows, unless you use Wine or DirectX-to-OpenGL.
     * Unity game engine (with shader support)

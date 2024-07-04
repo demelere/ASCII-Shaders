@@ -1,6 +1,10 @@
-#version 330
+#version 150
 
 uniform sampler2D texture;
+uniform sampler2D EdgesASCII;
+uniform sampler2D FillASCII;
+uniform sampler2D Normals;
+
 uniform float _Zoom = 1.0;
 uniform vec2 _Offset = vec2(0.0, 0.0);
 uniform int _KernelSize = 2;
@@ -25,11 +29,7 @@ uniform float _BlendWithBase = 0.0;
 uniform float _DepthFalloff = 0.0;
 uniform float _DepthOffset = 0.0;
 
-uniform sampler2D EdgesASCII;
-uniform sampler2D FillASCII;
-uniform sampler2D Normals;
-
-in vec2 texCoord;
+in vec4 vertTexCoord;
 out vec4 fragColor;
 
 const float PI = 3.14159265358979323846;
@@ -51,18 +51,10 @@ float luminance(vec3 color) {
 }
 
 void main() {
-    vec2 uv = transformUV(texCoord);
+    vec2 uv = transformUV(vertTexCoord.st);
     vec3 color = texture(texture, uv).rgb;
     float depth = texture(Normals, uv).a;
     vec3 normal = texture(Normals, uv).rgb * 2.0 - 1.0;
-
-    // Main shader logic:
-    // 1. Calculating luminance
-    // 2. Applying Gaussian blur
-    // 3. Calculating Difference of Gaussians
-    // 4. Edge detection
-    // 5. ASCII character selection and rendering
-    // Final color output
 
     // Implement Gaussian blur and edge detection
     float blur1 = 0.0;
