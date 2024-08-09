@@ -15,7 +15,7 @@ int main() {
     Shader asciiShader("../shaders/vertex.glsl", "../shaders/fragment.glsl");
     
     // Load textures
-    unsigned int inputTexture = loadTexture("../assets/input_image.png");
+    unsigned int inputTexture = loadTexture("../assets/frame1358.png");
     unsigned int fillASCIITexture = loadTexture("../assets/fillASCII.png");
     unsigned int edgesASCIITexture = loadTexture("../assets/edgesASCII.png");
 
