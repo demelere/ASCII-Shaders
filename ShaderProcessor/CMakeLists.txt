@@ -16,6 +16,10 @@ add_executable(AsciiShader
     src/image_processor.cpp
 )
 
+add_custom_command(TARGET AsciiShader POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:AsciiShader>/assets)
+
 target_link_libraries(AsciiShader 
     OpenGL::GL
     glfw
