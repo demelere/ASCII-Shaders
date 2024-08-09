@@ -1,0 +1,3 @@
+/Users/stephenlin/Developer/Personal/ascii-shader/ShaderProcessor/build/CMakeFiles/AsciiShader.dir
+/Users/stephenlin/Developer/Personal/ascii-shader/ShaderProcessor/build/CMakeFiles/edit_cache.dir
+/Users/stephenlin/Developer/Personal/ascii-shader/ShaderProcessor/build/CMakeFiles/rebuild_cache.dir
