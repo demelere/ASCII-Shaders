@@ -11,6 +11,9 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_executable(AsciiShader 
     src/main.cpp
     src/glad.c
+    src/shader.cpp
+    src/texture.cpp
+    src/image_processor.cpp
 )
 
 target_link_libraries(AsciiShader 
