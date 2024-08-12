@@ -5,6 +5,57 @@
 #include "stb_image_write.h"
 #include "stb_image.h"
 
+unsigned int quadVAO, quadVBO;
+void setupQuad() {
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+    };
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+}
+
+void renderPass(Shader& shader, const char* passName) {
+    shader.use();
+    shader.setInt("pass", getPassIndex(passName));
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+int getPassIndex(const char* passName) {
+    // Map pass names to indices
+    if (strcmp(passName, "PS_Luminance") == 0) return 0;
+    if (strcmp(passName, "PS_Downscale") == 0) return 1;
+    if (strcmp(passName, "PS_HorizontalBlur") == 0) return 2;
+    if (strcmp(passName, "PS_VerticalBlurAndDifference") == 0) return 3;
+    if (strcmp(passName, "PS_CalculateNormals") == 0) return 4;
+    if (strcmp(passName, "PS_EdgeDetect") == 0) return 5;
+    if (strcmp(passName, "PS_HorizontalSobel") == 0) return 6;
+    if (strcmp(passName, "PS_VerticalSobel") == 0) return 7;
+    if (strcmp(passName, "PS_EndPass") == 0) return 8;
+    return -1; // Invalid pass name
+}
+
+unsigned int createTexture(int width, int height, GLenum internalFormat) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    return texture;
+}
+
 void processImage(const char* inputPath, const char* outputPath, Shader& shader) {
     // Load input image
     int width, height, channels;
@@ -19,12 +70,61 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader)
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+    // Create textures for each pass
+    unsigned int luminanceTexture = createTexture(width, height, GL_R16F);
+    unsigned int downscaleTexture = createTexture(width / 8, height / 8, GL_RGBA16F);
+    unsigned int asciiPingTexture = createTexture(width, height, GL_RGBA16F);
+    unsigned int asciiDogTexture = createTexture(width, height, GL_R16F);
+    unsigned int normalsTexture = createTexture(width, height, GL_RGBA16F);
+    unsigned int asciiEdgesTexture = createTexture(width, height, GL_R16F);
+    unsigned int asciiSobelTexture = createTexture(width, height, GL_RG16F);
+
     // Create texture to render to
     unsigned int outputTexture;
     glGenTextures(1, &outputTexture);
     glBindTexture(GL_TEXTURE_2D, outputTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, 0);
+
+     // Render passes
+    // Pass 1: Luminance
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, luminanceTexture, 0);
+    renderPass(shader, "PS_Luminance");
+
+    // Pass 2: Downscale
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, downscaleTexture, 0);
+    renderPass(shader, "PS_Downscale");
+
+    // Pass 3: Horizontal Blur
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiPingTexture, 0);
+    renderPass(shader, "PS_HorizontalBlur");
+
+    // Pass 4: Vertical Blur and Difference
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiDogTexture, 0);
+    renderPass(shader, "PS_VerticalBlurAndDifference");
+
+    // Pass 5: Calculate Normals
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, normalsTexture, 0);
+    renderPass(shader, "PS_CalculateNormals");
+
+    // Pass 6: Edge Detect
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiEdgesTexture, 0);
+    renderPass(shader, "PS_EdgeDetect");
+
+    // Pass 7: Horizontal Sobel
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiPingTexture, 0);
+    renderPass(shader, "PS_HorizontalSobel");
+
+    // Pass 8: Vertical Sobel
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiSobelTexture, 0);
+    renderPass(shader, "PS_VerticalSobel");
+
+    // Pass 9: Render ASCII (This will be a compute shader pass, we'll handle it separately)
+
+    // Final Pass
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, 0);
+    renderPass(shader, "PS_EndPass");
+
 
     // Set up vertex data for a fullscreen quad
     float vertices[] = {
@@ -71,6 +171,13 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader)
 
     // Clean up
     glDeleteFramebuffers(1, &fbo);
+    glDeleteTextures(1, &luminanceTexture);
+    glDeleteTextures(1, &downscaleTexture);
+    glDeleteTextures(1, &asciiPingTexture);
+    glDeleteTextures(1, &asciiDogTexture);
+    glDeleteTextures(1, &normalsTexture);
+    glDeleteTextures(1, &asciiEdgesTexture);
+    glDeleteTextures(1, &asciiSobelTexture);
     glDeleteTextures(1, &outputTexture);
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
