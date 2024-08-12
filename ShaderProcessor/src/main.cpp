@@ -6,7 +6,35 @@
 #include "texture.h"
 #include "image_processor.h"
 
-GLFWwindow* initializeWindow(int width, int height);
+GLFWwindow* initializeWindow(int width, int height) {
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return nullptr;
+    }
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    #ifdef __APPLE__
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    #endif
+
+    GLFWwindow* window = glfwCreateWindow(width, height, "ASCII Shader", NULL, NULL);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return nullptr;
+    }
+
+    glfwMakeContextCurrent(window);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cerr << "Failed to initialize GLAD" << std::endl;
+        return nullptr;
+    }
+
+    return window;
+}
 
 int main() {
     GLFWwindow* window = initializeWindow(800, 600);
@@ -56,7 +84,7 @@ int main() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, edgesASCIITexture);
 
-    processImage("../assets/input_image.png", "output_image.png", asciiShader);
+    processImage("../assets/frame1358.png", "output_image.png", asciiShader);
 
     // Clean up
     glDeleteTextures(1, &inputTexture);

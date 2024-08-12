@@ -7,13 +7,6 @@ build/
 /build/CMakeFiles/**
 /build/CMakeFiles/CMakeConfigureLog.yaml
 /build/CMakeFiles/Makefile.cmake
-build/CMakeFiles/**
-build/CMakeFiles/AsciiShader.dir/**
-build/CMakeFiles/Progress/**
-build/CMakeFiles/CMakeConfigureLog.yaml
-build/CMakeFiles/Makefile.cmake
-build/CMakeFiles/Makefile2
-build/CMakeFiles/progress.marks
 
 # CMake files
 /build/CMakeFiles/**
@@ -29,3 +22,12 @@ cmake_install.cmake
 
 # Executable
 AsciiShader
+
+# New additions
+build/CMakeFiles/**
+build/CMakeFiles/AsciiShader.dir/**
+build/CMakeFiles/Progress/**
+build/CMakeFiles/CMakeConfigureLog.yaml
+build/CMakeFiles/Makefile.cmake
+build/CMakeFiles/Makefile2
+build/CMakeFiles/progress.marks

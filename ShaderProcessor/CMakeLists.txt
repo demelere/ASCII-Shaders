@@ -3,6 +3,9 @@ project(AsciiShaderProject)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_options(-Wno-deprecated-declarations)
+# add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
+
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
@@ -14,6 +17,7 @@ add_executable(AsciiShader
     src/shader.cpp
     src/texture.cpp
     src/image_processor.cpp
+    src/stb_image_wrapper.cpp
 )
 
 add_custom_command(TARGET AsciiShader POST_BUILD

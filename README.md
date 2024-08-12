@@ -28,6 +28,27 @@ How to apply the shader to each frame of the video.
 * `ascii_config.json`
 * Create bash scripts
 
+
+## Build Process
+
+1. Clean the build directory (if it exists): `rm -rf build`
+2. Create a new build directory and navigate into it: `mkdir build && cd build`
+3. Generate the build files using CMake: `cmake ..`
+4. Build the project: `make`
+5. Run the executable: `./AsciiShader`
+## Inserting/Linking the Image File
+1. Place your input image file in the `assets` directory within the project root.
+2. In the `main.cpp` file, locate the `loadTexture` function call and update the file path: `unsigned int inputTexture = loadTexture("../data/your_image_file.png");`
+3. If you want to process multiple images or use a different directory, you can modify the `loadTexture` function call accordingly:
+4. Rebuild the project after making changes:
+   ```
+   cd build
+   make
+   ```
+5. Run the executable again to process the new image:`./AsciiShader`
+
+Note: Make sure the image file format is supported by the `stb_image` library (e.g., PNG, JPG, BMP). If you encounter any issues loading the image, check the console output for error messages.
+
 # Transcript
 ## Introduction
 
