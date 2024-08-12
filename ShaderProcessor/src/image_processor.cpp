@@ -1,9 +1,11 @@
 #include "image_processor.h"
+#include <KHR/khrplatform.h>
 #include <glad/glad.h>
 #include <vector>
 #include <iostream>
 #include "stb_image_write.h"
 #include "stb_image.h"
+#include <GL/glext.h>
 
 unsigned int quadVAO, quadVBO;
 void setupQuad() {
@@ -25,13 +27,6 @@ void setupQuad() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 }
 
-void renderPass(Shader& shader, const char* passName) {
-    shader.use();
-    shader.setInt("pass", getPassIndex(passName));
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
 int getPassIndex(const char* passName) {
     // Map pass names to indices
     if (strcmp(passName, "PS_Luminance") == 0) return 0;
@@ -46,6 +41,13 @@ int getPassIndex(const char* passName) {
     return -1; // Invalid pass name
 }
 
+void renderPass(Shader& shader, const char* passName) {
+    shader.use();
+    shader.setInt("pass", getPassIndex(passName));
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
 unsigned int createTexture(int width, int height, GLenum internalFormat) {
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -56,7 +58,9 @@ unsigned int createTexture(int width, int height, GLenum internalFormat) {
     return texture;
 }
 
-void processImage(const char* inputPath, const char* outputPath, Shader& shader) {
+// void processImage(const char* inputPath, const char* outputPath, Shader& shader) {
+// void processImage(const char* inputPath, const char* outputPath, Shader& shader, Shader& computeShader) {
+void processImage(const char* inputPath, const char* outputPath, Shader& shader, Shader& computeShader, unsigned int edgesASCIITexture, unsigned int fillASCIITexture) {
     // Load input image
     int width, height, channels;
     unsigned char* inputData = stbi_load(inputPath, &width, &height, &channels, 0);
@@ -78,6 +82,17 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader)
     unsigned int normalsTexture = createTexture(width, height, GL_RGBA16F);
     unsigned int asciiEdgesTexture = createTexture(width, height, GL_R16F);
     unsigned int asciiSobelTexture = createTexture(width, height, GL_RG16F);
+
+    // Use the passed edgesASCIITexture and fillASCIITexture
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, edgesASCIITexture);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, fillASCIITexture);
+
+    // Set the uniforms for these textures in the shader
+    shader.use();
+    shader.setInt("EdgesASCII", 2);
+    shader.setInt("FillASCII", 3);
 
     // Create texture to render to
     unsigned int outputTexture;
@@ -119,12 +134,84 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, asciiSobelTexture, 0);
     renderPass(shader, "PS_VerticalSobel");
 
+    // Specify draw buffers
+    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6};
+    glDrawBuffers(7, drawBuffers);
+
+    // Check framebuffer completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "Framebuffer is not complete!" << std::endl;
+    }
+
     // Pass 9: Render ASCII (This will be a compute shader pass, we'll handle it separately)
+    // Compute shader pass
+    // shader.use();
+    // glBindImageTexture(0, asciiSobelTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG32F);
+    // glBindImageTexture(1, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    // glDispatchCompute((width + 7) / 8, (height + 7) / 8, 1);
+    // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // Pass 9: Render ASCII (Compute shader pass)
+    computeShader.use();
+    // glBindImageTexture(0, asciiSobelTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG32F);
+    // glBindImageTexture(1, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    // glDispatchCompute((width + 7) / 8, (height + 7) / 8, 1);
+    // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // Bind input textures
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, asciiSobelTexture);
+    computeShader.setInt("Sobel", 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, downscaleTexture);
+    computeShader.setInt("Downscale", 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, edgesASCIITexture);
+    computeShader.setInt("EdgesASCII", 2);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, fillASCIITexture);
+    computeShader.setInt("FillASCII", 3);
+
+    // Set uniforms
+    computeShader.setInt("_EdgeThreshold", 8);
+    computeShader.setBool("_Edges", true);
+    computeShader.setBool("_Fill", true);
+    computeShader.setFloat("_Exposure", 1.0f);
+    computeShader.setFloat("_Attenuation", 1.0f);
+    computeShader.setBool("_InvertLuminance", false);
+    computeShader.setVec3("_ASCIIColor", 1.0f, 1.0f, 1.0f);
+    computeShader.setVec3("_BackgroundColor", 0.0f, 0.0f, 0.0f);
+    computeShader.setFloat("_BlendWithBase", 0.0f);
+
+    // Bind image textures
+    glBindImageTexture(0, asciiSobelTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RG32F);
+    glBindImageTexture(1, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+    // Dispatch compute shader
+    glDispatchCompute((width + 7) / 8, (height + 7) / 8, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     // Final Pass
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, 0);
-    renderPass(shader, "PS_EndPass");
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, 0);
+    // renderPass(shader, "PS_EndPass");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+    shader.use();
+    shader.setInt("pass", getPassIndex("PS_EndPass"));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, outputTexture);
+    renderPass(shader, "PS_EndPass");   
 
+    // Read pixels
+    std::vector<unsigned char> outputData(width * height * 3);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, outputData.data()); 
+
+    // Save output image
+    stbi_flip_vertically_on_write(true);
+    stbi_write_png(outputPath, width, height, 3, outputData.data(), width * 3);
 
     // Set up vertex data for a fullscreen quad
     float vertices[] = {
@@ -162,8 +249,8 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     // Read pixels
-    std::vector<unsigned char> outputData(width * height * 3);
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, outputData.data());
+    // std::vector<unsigned char> outputData(width * height * 3);
+    // glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, outputData.data());
 
     // Save output image
     stbi_flip_vertically_on_write(true);

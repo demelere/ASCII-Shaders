@@ -73,3 +73,61 @@ void Shader::setVec2(const std::string &name, float x, float y) const {
 void Shader::setVec3(const std::string &name, float x, float y, float z) const { 
     glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z); 
 }
+
+Shader::Shader(const char* computePath) {
+    // Read compute shader
+    std::string computeCode;
+    std::ifstream cShaderFile;
+    cShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try {
+        cShaderFile.open(computePath);
+        std::stringstream cShaderStream;
+        cShaderStream << cShaderFile.rdbuf();
+        cShaderFile.close();
+        computeCode = cShaderStream.str();
+    }
+    catch (std::ifstream::failure& e) {
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
+    }
+    const char* cShaderCode = computeCode.c_str();
+
+    // Compile compute shader
+    unsigned int compute;
+    compute = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(compute, 1, &cShaderCode, NULL);
+    glCompileShader(compute);
+    checkCompileErrors(compute, "COMPUTE");
+
+    // Shader Program
+    ID = glCreateProgram();
+    glAttachShader(ID, compute);
+    glLinkProgram(ID);
+    checkCompileErrors(ID, "PROGRAM");
+
+    // Delete the shaders as they're linked into our program now and no longer necessary
+    glDeleteShader(compute);
+}
+
+void Shader::checkCompileErrors(unsigned int shader, std::string type)
+{
+    int success;
+    char infoLog[1024];
+    if (type != "PROGRAM")
+    {
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+            std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+        }
+    }
+    else
+    {
+        glGetProgramiv(shader, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            glGetProgramInfoLog(shader, 1024, NULL, infoLog);
+            std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+        }
+    }
+}

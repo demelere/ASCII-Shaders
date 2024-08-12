@@ -1,3 +1,4 @@
+#include <KHR/khrplatform.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -15,7 +16,8 @@ GLFWwindow* initializeWindow(int width, int height) {
         return nullptr;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     #ifdef __APPLE__
@@ -39,26 +41,33 @@ GLFWwindow* initializeWindow(int width, int height) {
     return window;
 }
 
-unsigned int createTexture(int width, int height, GLenum internalFormat) {
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    return texture;
-}
+// unsigned int createTexture(int width, int height, GLenum internalFormat) {
+//     unsigned int texture;
+//     glGenTextures(1, &texture);
+//     glBindTexture(GL_TEXTURE_2D, texture);
+//     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//     return texture;
+// }
 
 int main() {
     GLFWwindow* window = initializeWindow(800, 600);
     if (!window) return -1;
 
+    // Shader asciiShader("../shaders/vertex.glsl", "../shaders/fragment.glsl");
     Shader asciiShader("../shaders/vertex.glsl", "../shaders/fragment.glsl");
+    Shader computeShader("../shaders/ascii_compute.glsl");
     
     // Load textures
     unsigned int inputTexture = loadTexture("../assets/frame1358.png");
-    unsigned int fillASCIITexture = loadTexture("../assets/fillASCII.png");
     unsigned int edgesASCIITexture = loadTexture("../assets/edgesASCII.png");
+    unsigned int fillASCIITexture = loadTexture("../assets/fillASCII.png");
+
+    if (edgesASCIITexture == 0 || fillASCIITexture == 0) {
+        std::cerr << "Failed to load ASCII textures" << std::endl;
+        return -1;
+    }
     unsigned int luminanceTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_R16F);
     unsigned int downscaleTexture = createTexture(SCR_WIDTH / 8, SCR_HEIGHT / 8, GL_RGBA16F);
     unsigned int asciiPingTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_RGBA16F);
@@ -96,7 +105,6 @@ int main() {
     asciiShader.setFloat("_DepthFalloff", 0.0f);
     asciiShader.setFloat("_DepthOffset", 0.0f);
 
-    // Bind textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);
     glActiveTexture(GL_TEXTURE1);
@@ -104,7 +112,9 @@ int main() {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, edgesASCIITexture);
 
-    processImage("../assets/frame1358.png", "output_image.png", asciiShader);
+    // processImage("../assets/frame1358.png", "output_image.png", asciiShader);
+    // processImage("../assets/frame1358.png", "../output/output.png", asciiShader, computeShader);
+    processImage("../assets/frame1358.png", "../output/output.png", asciiShader, computeShader, edgesASCIITexture, fillASCIITexture);
 
     // Clean up
     glDeleteTextures(1, &inputTexture);
