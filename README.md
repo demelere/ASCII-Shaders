@@ -31,7 +31,7 @@ How to apply the shader to each frame of the video.
 
 ## Build Process
 
-1. Clean the build directory (if it exists): `rm -rf build`
+1. Clean the build directory (if it exists): `rm -rf build`, or navigate to it and `rm -rf *`
 2. Create a new build directory and navigate into it: `mkdir build && cd build`
 3. Generate the build files using CMake: `cmake ..`
 4. Build the project: `make`

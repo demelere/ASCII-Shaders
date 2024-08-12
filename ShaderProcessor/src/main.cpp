@@ -6,6 +6,9 @@
 #include "texture.h"
 #include "image_processor.h"
 
+const unsigned int SCR_WIDTH = 1280;
+const unsigned int SCR_HEIGHT = 720;
+
 GLFWwindow* initializeWindow(int width, int height) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -36,6 +39,16 @@ GLFWwindow* initializeWindow(int width, int height) {
     return window;
 }
 
+unsigned int createTexture(int width, int height, GLenum internalFormat) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    return texture;
+}
+
 int main() {
     GLFWwindow* window = initializeWindow(800, 600);
     if (!window) return -1;
@@ -46,6 +59,13 @@ int main() {
     unsigned int inputTexture = loadTexture("../assets/frame1358.png");
     unsigned int fillASCIITexture = loadTexture("../assets/fillASCII.png");
     unsigned int edgesASCIITexture = loadTexture("../assets/edgesASCII.png");
+    unsigned int luminanceTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_R16F);
+    unsigned int downscaleTexture = createTexture(SCR_WIDTH / 8, SCR_HEIGHT / 8, GL_RGBA16F);
+    unsigned int asciiPingTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_RGBA16F);
+    unsigned int asciiDogTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_R16F);
+    unsigned int normalsTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_RGBA16F);
+    unsigned int asciiEdgesTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_R16F);
+    unsigned int asciiSobelTexture = createTexture(SCR_WIDTH, SCR_HEIGHT, GL_RG16F);
 
     // Set uniforms
     asciiShader.use();
