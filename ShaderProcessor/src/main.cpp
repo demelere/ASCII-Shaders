@@ -10,12 +10,20 @@
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
+void error_callback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error: %s\n", description);
+}
+
 GLFWwindow* initializeWindow(int width, int height) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return nullptr;
     }
+    
+    glfwSetErrorCallback(error_callback);
 
+    // try to create an openGL 4.3 context
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -26,9 +34,15 @@ GLFWwindow* initializeWindow(int width, int height) {
 
     GLFWwindow* window = glfwCreateWindow(width, height, "ASCII Shader", NULL, NULL);
     if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return nullptr;
+        // If 4.3 fails, try 3.3
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        window = glfwCreateWindow(width, height, "ASCII Shader (Fallback)", NULL, NULL);
+        if (!window) {
+            std::cerr << "Failed to create GLFW window" << std::endl;
+            glfwTerminate();
+            return nullptr;
+        }
     }
 
     glfwMakeContextCurrent(window);
