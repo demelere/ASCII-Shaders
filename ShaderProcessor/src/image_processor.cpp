@@ -80,6 +80,22 @@ void checkOpenGLError(const std::string& location) {
     }
 }
 
+void createOutputDirectory(const std::string& path) {
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        // Directory does not exist, attempt to create it
+        if (mkdir(path.c_str(), 0777) == -1) {
+            std::cerr << "Error creating directory " << path << ": " << strerror(errno) << std::endl;
+        } else {
+            std::cout << "Output directory created: " << path << std::endl;
+        }
+    } else if (!(info.st_mode & S_IFDIR)) {
+        std::cerr << path << " is not a directory" << std::endl;
+    } else {
+        std::cout << "Output directory is accessible: " << path << std::endl;
+    }
+}
+
 // void processImage(const char* inputPath, const char* outputPath, Shader& shader) {
 // void processImage(const char* inputPath, const char* outputPath, Shader& shader, Shader& computeShader) {
 // void processImage(const char* inputPath, const char* outputPath, Shader& shader, Shader& computeShader, unsigned int edgesASCIITexture, unsigned int fillASCIITexture) {
@@ -92,7 +108,8 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader,
         return;
     }
 
-    checkOutputDirectory("../output/");
+    // checkOutputDirectory("../output/");
+    createOutputDirectory("../output/");
 
     // Create framebuffer
    // Create framebuffer
