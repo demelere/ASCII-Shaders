@@ -6,6 +6,9 @@
 #include "stb_image_write.h"
 #include "stb_image.h"
 #include <GL/glext.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
 
 unsigned int quadVAO, quadVBO;
 void setupQuad() {
@@ -52,10 +55,29 @@ unsigned int createTexture(int width, int height, GLenum internalFormat) {
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
+    // glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RED, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     return texture;
+}
+
+void checkOutputDirectory(const std::string& path) {
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        std::cerr << "Cannot access " << path << ": " << strerror(errno) << std::endl;
+    } else if (!(info.st_mode & S_IFDIR)) {
+        std::cerr << path << " is not a directory" << std::endl;
+    } else {
+        std::cout << "Output directory is accessible: " << path << std::endl;
+    }
+}
+
+void checkOpenGLError(const std::string& location) {
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cerr << "OpenGL error at " << location << ": " << err << std::endl;
+    }
 }
 
 // void processImage(const char* inputPath, const char* outputPath, Shader& shader) {
@@ -70,19 +92,83 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader,
         return;
     }
 
+    checkOutputDirectory("../output/");
+
     // Create framebuffer
-    unsigned int fbo;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+   // Create framebuffer
+unsigned int fbo;
+glGenFramebuffers(1, &fbo);
+glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+// Create and attach a color attachment texture
+unsigned int colorAttachment;
+glGenTextures(1, &colorAttachment);
+glBindTexture(GL_TEXTURE_2D, colorAttachment);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorAttachment, 0);
+
+// Check framebuffer completeness
+if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    std::cerr << "Framebuffer is not complete!" << std::endl;
+    return;
+}
+std::cout << "Framebuffer created successfully." << std::endl;
 
     // Create textures for each pass
-    unsigned int luminanceTexture = createTexture(width, height, GL_R16F);
-    unsigned int downscaleTexture = createTexture(width / 8, height / 8, GL_RGBA16F);
-    unsigned int asciiPingTexture = createTexture(width, height, GL_RGBA16F);
-    unsigned int asciiDogTexture = createTexture(width, height, GL_R16F);
-    unsigned int normalsTexture = createTexture(width, height, GL_RGBA16F);
-    unsigned int asciiEdgesTexture = createTexture(width, height, GL_R16F);
-    unsigned int asciiSobelTexture = createTexture(width, height, GL_RG16F);
+unsigned int luminanceTexture = createTexture(width, height, GL_R16F);
+if (luminanceTexture == 0) {
+    std::cerr << "Failed to create luminance texture" << std::endl;
+    return;
+}
+
+unsigned int downscaleTexture = createTexture(width / 8, height / 8, GL_RGBA16F);
+if (downscaleTexture == 0) {
+    std::cerr << "Failed to create downscale texture" << std::endl;
+    return;
+}
+
+unsigned int asciiPingTexture = createTexture(width, height, GL_RGBA16F);
+if (asciiPingTexture == 0) {
+    std::cerr << "Failed to create ASCII ping texture" << std::endl;
+    return;
+}
+
+unsigned int asciiDogTexture = createTexture(width, height, GL_R16F);
+if (asciiDogTexture == 0) {
+    std::cerr << "Failed to create ASCII DoG texture" << std::endl;
+    return;
+}
+
+unsigned int normalsTexture = createTexture(width, height, GL_RGBA16F);
+if (normalsTexture == 0) {
+    std::cerr << "Failed to create normals texture" << std::endl;
+    return;
+}
+
+unsigned int asciiEdgesTexture = createTexture(width, height, GL_R16F);
+if (asciiEdgesTexture == 0) {
+    std::cerr << "Failed to create ASCII edges texture" << std::endl;
+    return;
+}
+
+unsigned int asciiSobelTexture = createTexture(width, height, GL_RG16F);
+if (asciiSobelTexture == 0) {
+    std::cerr << "Failed to create ASCII Sobel texture" << std::endl;
+    return;
+}
+
+// Create texture to render to
+unsigned int outputTexture;
+glGenTextures(1, &outputTexture);
+glBindTexture(GL_TEXTURE_2D, outputTexture);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+if (glGetError() != GL_NO_ERROR) {
+    std::cerr << "Failed to create output texture" << std::endl;
+    checkOpenGLError("glTexImage2D for outputTexture");
+    return;
+}
 
     // Use the passed edgesASCIITexture and fillASCIITexture
     glActiveTexture(GL_TEXTURE2);
@@ -96,12 +182,17 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader,
     shader.setInt("FillASCII", 3);
 
     // Create texture to render to
-    unsigned int outputTexture;
-    glGenTextures(1, &outputTexture);
-    glBindTexture(GL_TEXTURE_2D, outputTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    // unsigned int outputTexture;
+    // glGenTextures(1, &outputTexture);
+    // glBindTexture(GL_TEXTURE_2D, outputTexture);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, 0);
 
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Framebuffer is not complete!" << std::endl;
+        return;
+    }
      // Render passes
     // Pass 1: Luminance
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, luminanceTexture, 0);
@@ -139,10 +230,10 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader,
     GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6};
     glDrawBuffers(7, drawBuffers);
 
-    // Check framebuffer completeness
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cout << "Framebuffer is not complete!" << std::endl;
-    }
+    // // Check framebuffer completeness
+    // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    //     std::cout << "Framebuffer is not complete!" << std::endl;
+    // }
 
     // Pass 9: Render ASCII (This will be a compute shader pass, we'll handle it separately)
     if (computeShader) {
@@ -235,15 +326,31 @@ void processImage(const char* inputPath, const char* outputPath, Shader& shader,
     shader.setInt("pass", getPassIndex("PS_EndPass"));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, outputTexture);
-    renderPass(shader, "PS_EndPass");   
+    // renderPass(shader, "PS_EndPass");   
+    std::cout << "Starting final render pass..." << std::endl;
+    renderPass(shader, "PS_EndPass");
+    std::cout << "Final render pass completed." << std::endl;
 
     // Read pixels
     std::vector<unsigned char> outputData(width * height * 3);
     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, outputData.data()); 
+    if (!inputData) {
+        std::cerr << "Failed to load input image: " << inputPath << std::endl;
+        return;
+    }
+    std::cout << "Input image loaded successfully." << std::endl;
 
     // Save output image
+    std::cout << "Attempting to write output image to: " << outputPath << std::endl;
+    std::cout << "Image dimensions: " << width << "x" << height << std::endl;
+    std::cout << "Output data size: " << outputData.size() << std::endl;
     stbi_flip_vertically_on_write(true);
     stbi_write_png(outputPath, width, height, 3, outputData.data(), width * 3);
+    if (!stbi_write_png(outputPath, width, height, 3, outputData.data(), width * 3)) {
+        std::cerr << "Failed to write output image: " << outputPath << std::endl;
+    } else {
+        std::cout << "Output image saved successfully: " << outputPath << std::endl;
+    }
 
     // Set up vertex data for a fullscreen quad
     float vertices[] = {

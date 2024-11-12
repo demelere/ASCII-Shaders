@@ -55,8 +55,14 @@ GLFWwindow* initializeWindow(int width, int height) {
 }
 
 int main() {
+    std::cout << "Initializing application..." << std::endl;
     GLFWwindow* window = initializeWindow(SCR_WIDTH, SCR_HEIGHT);
-    if (!window) return -1;
+    // if (!window) return -1;
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        return -1;
+    }
+    std::cout << "GLFW window created successfully" << std::endl;
 
     int majorVersion, minorVersion;
     glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
@@ -128,6 +134,8 @@ int main() {
     glBindTexture(GL_TEXTURE_2D, fillASCIITexture);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, edgesASCIITexture);
+
+    // checkOutputDirectory("../output/");
 
     // Process image
     if (majorVersion > 4 || (majorVersion == 4 && minorVersion >= 3)) {
