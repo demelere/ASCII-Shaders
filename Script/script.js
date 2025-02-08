@@ -82,6 +82,10 @@ const DITHER_ALGORITHMS = {
       this.copyBtn = document.getElementById("copyBtn");
       this.downloadBtn = document.getElementById("downloadBtn");
   
+      this.processingCanceled = false;
+      this.processedCount = 0;
+      this.failedFiles = [];
+  
       this.setupEventListeners();
     }
   
@@ -739,67 +743,153 @@ const DITHER_ALGORITHMS = {
       if (this.pendingFiles.length > 0) {
         this.copyBtn.disabled = true;
         this.downloadBtn.textContent = `Process ${this.pendingFiles.length} Images`;
+        
+        // Add cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'cancel-btn';
+        cancelBtn.onclick = () => this.cancelProcessing();
+        this.downloadBtn.parentNode.insertBefore(cancelBtn, this.downloadBtn.nextSibling);
+        
+        // Add progress element
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'progress-container';
+        progressDiv.innerHTML = `
+            <div class="progress-bar">
+                <div class="progress" id="processProgress"></div>
+            </div>
+            <div class="progress-text" id="progressText">Ready to process</div>
+        `;
+        this.downloadBtn.parentNode.insertBefore(progressDiv, this.downloadBtn.nextSibling);
+        
         // Show a preview of the first image
         this.handleFile(this.pendingFiles[0], true);
       }
     }
 
-    async processAllFiles() {
-        this.downloadBtn.disabled = true;
-        this.downloadBtn.textContent = "Processing...";
+    cancelProcessing() {
+      this.processingCanceled = true;
+      const cancelBtn = document.querySelector('.cancel-btn');
+      if (cancelBtn) cancelBtn.disabled = true;
+    }
 
-        // Create a directory picker
-        try {
-            // Show directory picker
-            const dirHandle = await window.showDirectoryPicker();
-            
-            // Process each file
-            for (const file of this.pendingFiles) {
-                await this.processAndSaveFile(file, dirHandle);
-            }
-
-            this.downloadBtn.disabled = false;
-            this.downloadBtn.textContent = "Done!";
-            setTimeout(() => {
-                this.downloadBtn.textContent = "Download";
-                this.isDirectory = false;
-                this.pendingFiles = [];
-                this.copyBtn.disabled = false;
-            }, 2000);
-        } catch (err) {
-            // Handle if user cancels directory selection
-            console.error('Directory selection cancelled or failed:', err);
-            this.downloadBtn.disabled = false;
-            this.downloadBtn.textContent = "Download";
-            this.copyBtn.disabled = false;
+    updateProgress(current, total, filename = '') {
+      const progress = document.getElementById('processProgress');
+      const progressText = document.getElementById('progressText');
+      if (progress && progressText) {
+        const percent = (current / total) * 100;
+        progress.style.width = `${percent}%`;
+        progressText.textContent = `Processing ${current}/${total}: ${filename}`;
+        if (this.failedFiles.length > 0) {
+          progressText.textContent += ` (${this.failedFiles.length} failed)`;
         }
+      }
+    }
+
+    async processAllFiles() {
+      this.downloadBtn.disabled = true;
+      this.downloadBtn.textContent = "Processing...";
+      this.processingCanceled = false;
+      this.processedCount = 0;
+      this.failedFiles = [];
+
+      try {
+        const dirHandle = await window.showDirectoryPicker();
+        
+        for (const file of this.pendingFiles) {
+          if (this.processingCanceled) {
+            break;
+          }
+          
+          try {
+            await this.processAndSaveFile(file, dirHandle);
+            this.processedCount++;
+          } catch (err) {
+            console.error('Error processing file:', file.name, err);
+            this.failedFiles.push({ file, error: err.message });
+          }
+          
+          this.updateProgress(this.processedCount, this.pendingFiles.length, file.name);
+        }
+
+        // Show final status
+        const progressText = document.getElementById('progressText');
+        if (progressText) {
+          if (this.processingCanceled) {
+            progressText.textContent = `Cancelled: ${this.processedCount} processed, ${this.failedFiles.length} failed`;
+          } else {
+            progressText.textContent = `Complete: ${this.processedCount} processed, ${this.failedFiles.length} failed`;
+          }
+        }
+
+        // Clean up UI after delay
+        setTimeout(() => {
+          this.downloadBtn.textContent = "Download";
+          this.downloadBtn.disabled = false;
+          this.isDirectory = false;
+          this.pendingFiles = [];
+          this.copyBtn.disabled = false;
+          
+          // Remove progress and cancel elements
+          const progressContainer = document.querySelector('.progress-container');
+          const cancelBtn = document.querySelector('.cancel-btn');
+          if (progressContainer) progressContainer.remove();
+          if (cancelBtn) cancelBtn.remove();
+          
+          // Show error summary if there were failures
+          if (this.failedFiles.length > 0) {
+            this.showErrorSummary();
+          }
+        }, 2000);
+
+      } catch (err) {
+        console.error('Directory selection cancelled or failed:', err);
+        this.downloadBtn.disabled = false;
+        this.downloadBtn.textContent = "Download";
+        this.copyBtn.disabled = false;
+      }
+    }
+
+    showErrorSummary() {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-summary';
+      errorDiv.innerHTML = `
+          <h3>Failed Files:</h3>
+          <ul>
+              ${this.failedFiles.map(f => `
+                  <li>${f.file.name}: ${f.error}</li>
+              `).join('')}
+          </ul>
+      `;
+      this.downloadBtn.parentNode.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 5000);
     }
 
     async processAndSaveFile(file, dirHandle) {
-        // Process the image
-        await new Promise((resolve) => {
-            const img = new Image();
-            img.onload = async () => {
-                this.originalImage = img;
-                await this.generate();
-                
-                // Get the processed image data
-                const blob = await new Promise(resolve => this.canvas.toBlob(resolve));
-                
-                // Save to the selected directory
-                try {
-                    const newFileHandle = await dirHandle.getFileHandle(`ascii-${file.name}`, { create: true });
-                    const writable = await newFileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                } catch (err) {
-                    console.error('Error saving file:', err);
-                }
-                
-                resolve();
-            };
-            img.src = URL.createObjectURL(file);
-        });
+      // Process the image
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = async () => {
+          this.originalImage = img;
+          await this.generate();
+          
+          // Get the processed image data
+          const blob = await new Promise(resolve => this.canvas.toBlob(resolve));
+          
+          // Save to the selected directory
+          try {
+            const newFileHandle = await dirHandle.getFileHandle(`ascii-${file.name}`, { create: true });
+            const writable = await newFileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (err) {
+            console.error('Error saving file:', err);
+          }
+          
+          resolve();
+        };
+        img.src = URL.createObjectURL(file);
+      });
     }
   }
   

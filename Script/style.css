@@ -357,3 +357,68 @@ footer {
         padding: 1rem;
     }
 }
+
+.progress-container {
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--input-bg);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress {
+    width: 0;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.cancel-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    margin-top: 0.5rem;
+}
+
+.cancel-btn:hover {
+    background: #ff6666;
+}
+
+.cancel-btn:disabled {
+    background: #666;
+}
+
+.error-summary {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.error-summary h3 {
+    color: #ff4444;
+    margin-bottom: 0.5rem;
+}
+
+.error-summary ul {
+    list-style: none;
+    padding: 0;
+}
+
+.error-summary li {
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
