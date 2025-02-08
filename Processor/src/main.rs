@@ -16,13 +16,9 @@ struct Cli {
     #[arg(short, long)]
     input: Vec<PathBuf>,
 
-    /// Output directory
+    /// Output directory (optional, defaults to 'output' subdirectory in input location)
     #[arg(short, long)]
-    output: PathBuf,
-
-    /// Settings file path (JSON)
-    #[arg(short, long)]
-    settings: PathBuf,
+    output: Option<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -174,29 +170,49 @@ impl ImageProcessor {
     }
 }
 
+fn get_output_path(input_path: &Path, base_output_dir: Option<&Path>) -> PathBuf {
+    if let Some(output_dir) = base_output_dir {
+        output_dir.to_path_buf()
+    } else {
+        // If input is a file, create output directory next to it
+        if input_path.is_file() {
+            input_path.parent().unwrap_or(Path::new(".")).join("output")
+        } else {
+            // If input is a directory, create output directory inside it
+            input_path.join("output")
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
     // Load settings from JSON file
-    let settings: AsciiSettings = if cli.settings.exists() {
-        let settings_str = std::fs::read_to_string(&cli.settings)
-            .context("Failed to read settings file")?;
-        serde_json::from_str(&settings_str)
-            .context("Failed to parse settings JSON")?
+    let settings: AsciiSettings = if let Some(settings_path) = cli.output.as_ref().map(|p| p.join("settings.json")) {
+        if settings_path.exists() {
+            let settings_str = std::fs::read_to_string(&settings_path)
+                .context("Failed to read settings file")?;
+            serde_json::from_str(&settings_str)
+                .context("Failed to parse settings JSON")?
+        } else {
+            AsciiSettings::default()
+        }
     } else {
         AsciiSettings::default()
     };
-
-    // Create output directory if it doesn't exist
-    std::fs::create_dir_all(&cli.output)
-        .context("Failed to create output directory")?;
 
     let processor = ImageProcessor::new(settings);
 
     // Process all input paths
     for input_path in &cli.input {
+        let output_dir = get_output_path(input_path, cli.output.as_deref());
+        
         if input_path.is_file() {
-            let output_path = cli.output.join(
+            // Create output directory if it doesn't exist
+            std::fs::create_dir_all(&output_dir)
+                .context("Failed to create output directory")?;
+
+            let output_path = output_dir.join(
                 input_path
                     .file_name()
                     .unwrap()
@@ -224,7 +240,7 @@ fn main() -> Result<()> {
                         .path()
                         .strip_prefix(input_path)
                         .unwrap_or(entry.path());
-                    let output_path = cli.output.join(
+                    let output_path = output_dir.join(
                         rel_path
                             .to_string_lossy()
                             .replace(".", "_ascii.")
