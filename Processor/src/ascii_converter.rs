@@ -1,35 +1,120 @@
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
-use std::collections::HashMap;
-use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref COLOR_PALETTES: HashMap<&'static str, Vec<&'static str>> = {
-        let mut m = HashMap::new();
-        m.insert("original", vec![]);  // Empty vec indicates using original colors
-        m.insert("black_white", vec!["#000000", "#ffffff"]);
-        m.insert("terminal", vec![
-            "#000000", "#800000", "#008000", "#808000",
-            "#000080", "#800080", "#008080", "#c0c0c0",
-            "#808080", "#ff0000", "#00ff00", "#ffff00",
-            "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
-        ]);
-        m.insert("amber", vec!["#000000", "#ff8000"]);
-        m.insert("low_contrast", vec![
-            "#222222", "#333333", "#444444", "#555555",
-            "#666666", "#777777", "#888888", "#999999"
-        ]);
-        m.insert("nord", vec![
-            "#2e3440", "#3b4252", "#434c5e", "#4c566a",
-            "#d8dee9", "#e5e9f0", "#eceff4", "#8fbcbb",
-            "#88c0d0", "#81a1c1", "#5e81ac"
-        ]);
-        m.insert("catppuccin", vec![
-            "#1e1e2e", "#313244", "#45475a", "#585b70",
-            "#cdd6f4", "#bac2de", "#a6adc8", "#9399b2",
-            "#f5c2e7", "#f2cdcd", "#cba6f7"
-        ]);
-        m
-    };
+pub struct ColorPalette {
+    pub name: &'static str,
+    pub colors: Option<Vec<[u8; 3]>>,
+    pub fg: Option<[u8; 3]>,
+    pub bg: Option<[u8; 3]>,
+}
+
+pub const PALETTES: &[ColorPalette] = &[
+    ColorPalette {
+        name: "original",
+        colors: None,
+        fg: None,
+        bg: None,
+    },
+    ColorPalette {
+        name: "bw",
+        colors: None,
+        fg: Some([0, 0, 0]),
+        bg: Some([255, 255, 255]),
+    },
+    ColorPalette {
+        name: "terminal",
+        colors: Some(vec![
+            [7, 54, 66],
+            [88, 110, 117],
+            [101, 123, 131],
+            [131, 148, 150],
+            [147, 161, 161],
+            [238, 232, 213],
+            [253, 246, 227],
+        ]),
+        bg: Some([0, 43, 54]),
+        fg: None,
+    },
+    ColorPalette {
+        name: "amber",
+        colors: Some(vec![
+            [255, 176, 0],
+            [255, 192, 0],
+            [255, 208, 0],
+            [255, 224, 0],
+        ]),
+        bg: Some([0, 0, 0]),
+        fg: None,
+    },
+    ColorPalette {
+        name: "low_contrast",
+        colors: Some(vec![
+            [205, 205, 205],
+            [180, 180, 180],
+            [155, 155, 155],
+            [130, 130, 130],
+        ]),
+        bg: Some([230, 230, 230]),
+        fg: None,
+    },
+    ColorPalette {
+        name: "nord",
+        colors: Some(vec![
+            [216, 222, 233],
+            [229, 233, 240],
+            [236, 239, 244],
+        ]),
+        bg: Some([46, 52, 64]),
+        fg: None,
+    },
+    ColorPalette {
+        name: "catppuccin",
+        colors: Some(vec![
+            [245, 224, 220],
+            [242, 205, 205],
+            [245, 194, 231],
+            [203, 166, 247],
+            [243, 139, 168],
+            [235, 160, 172],
+            [250, 179, 135],
+            [249, 226, 175],
+            [166, 227, 161],
+            [148, 226, 213],
+            [137, 220, 235],
+            [116, 199, 236],
+        ]),
+        bg: Some([30, 30, 46]),
+        fg: None,
+    },
+];
+
+pub fn hex_to_rgb(hex: &str) -> [u8; 3] {
+    let hex = hex.trim_start_matches('#');
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+    [r, g, b]
+}
+
+pub fn get_color_for_brightness(brightness: u8, palette_name: &str, original_color: [u8; 3]) -> [u8; 3] {
+    if palette_name == "original" {
+        return original_color;
+    }
+
+    let palette = PALETTES.iter().find(|p| p.name == palette_name).unwrap_or(&PALETTES[0]);
+
+    if let Some(colors) = &palette.colors {
+        let index = (brightness as f32 / 255.0 * (colors.len() - 1) as f32) as usize;
+        colors[index.min(colors.len() - 1)]
+    } else if let (Some(fg), Some(bg)) = (palette.fg, palette.bg) {
+        let factor = brightness as f32 / 255.0;
+        [
+            ((1.0 - factor) * bg[0] as f32 + factor * fg[0] as f32) as u8,
+            ((1.0 - factor) * bg[1] as f32 + factor * fg[1] as f32) as u8,
+            ((1.0 - factor) * bg[2] as f32 + factor * fg[2] as f32) as u8,
+        ]
+    } else {
+        original_color
+    }
 }
 
 pub fn to_grayscale(img: &DynamicImage) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
@@ -151,27 +236,5 @@ pub fn auto_adjust_brightness(img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
                 pixel[c] = (((pixel[c] as f32 - min as f32) / range) * 255.0) as u8;
             }
         }
-    }
-}
-
-pub fn hex_to_rgb(hex: &str) -> Rgba<u8> {
-    let hex = hex.trim_start_matches('#');
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-    Rgba([r, g, b, 255])
-}
-
-pub fn get_palette_color(brightness: u8, palette_name: &str) -> Rgba<u8> {
-    if let Some(palette) = COLOR_PALETTES.get(palette_name) {
-        if palette.is_empty() {
-            // Original colors case
-            return Rgba([brightness, brightness, brightness, 255]);
-        }
-        let index = ((brightness as f32 / 255.0) * (palette.len() - 1) as f32).round() as usize;
-        hex_to_rgb(palette[index])
-    } else {
-        // Default to grayscale if palette not found
-        Rgba([brightness, brightness, brightness, 255])
     }
 } 

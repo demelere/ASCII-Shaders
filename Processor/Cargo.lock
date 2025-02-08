@@ -72,6 +72,7 @@ dependencies = [
  "clap",
  "colored",
  "image",
+ "lazy_static",
  "rayon",
  "serde",
  "serde_json",

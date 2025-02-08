@@ -36,8 +36,9 @@ struct AsciiSettings {
     sigma1: f32,
     sigma2: f32,
     ascii_chars: String,
-    dithering: String,
+    dithering: bool,
     palette: String,
+    color_palette: Vec<String>,
     foreground: String,
     background: String,
 }
@@ -56,6 +57,7 @@ impl Default for AsciiSettings {
             ascii_chars: " .:-=+*#%@".to_string(),
             dithering: false,
             palette: "original".to_string(),
+            color_palette: vec!["#ffffff".to_string()],
             foreground: "#000000".to_string(),
             background: "#ffffff".to_string(),
         }
@@ -130,10 +132,8 @@ impl ImageProcessor {
                         if px < width && py < height {
                             let pixel = img.get_pixel(px, py);
                             sum += pixel[0] as u32;
-                            if self.settings.palette == "original" {
-                                for c in 0..3 {
-                                    avg_color[c] += pixel[c] as u32;
-                                }
+                            for c in 0..3 {
+                                avg_color[c] += pixel[c] as u32;
                             }
                             count += 1;
                         }
@@ -143,15 +143,12 @@ impl ImageProcessor {
                 let avg_brightness = (sum / count) as u8;
                 let ascii_char = get_ascii_char(avg_brightness, &self.settings.ascii_chars, self.settings.invert);
                 
-                // Get color based on palette
-                let color = if self.settings.palette == "original" && self.settings.color {
-                    let r = (avg_color[0] / count) as u8;
-                    let g = (avg_color[1] / count) as u8;
-                    let b = (avg_color[2] / count) as u8;
-                    Rgba([r, g, b, 255])
-                } else {
-                    get_palette_color(avg_brightness, &self.settings.palette)
-                };
+                // Calculate average original color
+                let original_color = [
+                    (avg_color[0] / count) as u8,
+                    (avg_color[1] / count) as u8,
+                    (avg_color[2] / count) as u8,
+                ];
                 
                 // Draw the ASCII character
                 for by in 0..block_size {
@@ -159,6 +156,13 @@ impl ImageProcessor {
                         let px = x * block_size + bx;
                         let py = y * block_size + by;
                         if px < width && py < height {
+                            let color = if self.settings.color {
+                                let rgb = get_color_for_brightness(avg_brightness, &self.settings.palette, original_color);
+                                Rgba([rgb[0], rgb[1], rgb[2], 255])
+                            } else {
+                                let v = if ascii_char == ' ' { 255 } else { 0 };
+                                Rgba([v, v, v, 255])
+                            };
                             output.put_pixel(px, py, color);
                         }
                     }

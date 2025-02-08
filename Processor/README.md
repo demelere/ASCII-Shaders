@@ -8,6 +8,7 @@ A Rust program that converts images to ASCII art, with support for processing mu
 - Parallel processing for faster conversion
 - Customizable settings via JSON configuration
 - Support for edge detection
+- Color preservation option
 - Multiple color palette options
 - Brightness adjustment and auto-contrast
 - Floyd-Steinberg dithering
@@ -61,35 +62,36 @@ Process with custom settings:
 
 ## Settings
 
-The program uses a JSON configuration file to customize the ASCII art conversion. You can find a template in `settings_template.json`. Here are the available settings:
+The program uses a JSON configuration file to customize the ASCII art conversion. You can find a template in `settings_template.json` and example configurations in `settings_examples.json`. Here are the available settings:
 
 - `block_size`: Size of each ASCII character block (default: 8)
 - `brightness`: Brightness adjustment factor (default: 1.0)
 - `auto_adjust`: Enable automatic contrast adjustment (default: true)
-- `color`: Preserve original colors when using "original" palette (default: true)
+- `color`: Preserve original colors (default: true)
 - `invert`: Invert brightness values (default: false)
 - `edge_detection`: Use edge detection mode (default: false)
 - `sigma1`: Edge detection strength parameter 1 (default: 2.0)
 - `sigma2`: Edge detection strength parameter 2 (default: 2.0)
 - `ascii_chars`: String of ASCII characters to use (default: " .:-=+*#%@")
 - `dithering`: Enable Floyd-Steinberg dithering (default: false)
-- `palette`: Color palette to use (default: "original")
+- `palette`: Color palette to use (see below)
+- `color_palette`: Array of hex color codes for custom palettes (default: ["#ffffff"])
 - `foreground`: Foreground color in hex (default: "#000000")
 - `background`: Background color in hex (default: "#ffffff")
 
-### Available Color Palettes
+### Color Palettes
 
-The program supports several color palettes through the `palette` setting:
+The program supports several built-in color palettes that can be specified using the `palette` setting:
 
-1. `"original"`: Uses the original colors from the input image
-2. `"black_white"`: Simple black and white output
-3. `"terminal"`: Classic 16-color terminal palette
-4. `"amber"`: Vintage amber monitor look (black and amber)
-5. `"low_contrast"`: Subtle grayscale variations
-6. `"nord"`: Nord color theme with cool, arctic colors
-7. `"catppuccin"`: Catppuccin theme with soft, pastel colors
+- `"original"`: Uses the original colors from the input image
+- `"bw"`: Black and white palette
+- `"terminal"`: Terminal-style colors with Solarized-inspired palette
+- `"amber"`: Classic amber monochrome display
+- `"low_contrast"`: Low contrast grayscale palette
+- `"nord"`: Nord theme colors
+- `"catppuccin"`: Catppuccin theme colors
 
-To use original colors from the input image:
+To use the original colors from your image, set:
 ```json
 {
   "palette": "original",
@@ -97,12 +99,7 @@ To use original colors from the input image:
 }
 ```
 
-For any other palette, simply set the palette name:
-```json
-{
-  "palette": "nord"
-}
-```
+Example palettes can be found in `settings_examples.json`.
 
 ## Supported Image Formats
 

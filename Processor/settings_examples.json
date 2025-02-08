@@ -1,0 +1,135 @@
+[
+  {
+    "name": "Original Colors",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "original",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Black and White",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "bw",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Terminal Style",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "terminal",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Amber Monochrome",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "amber",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Low Contrast",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "low_contrast",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Nord Theme",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "nord",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  },
+  {
+    "name": "Catppuccin Theme",
+    "settings": {
+      "block_size": 10,
+      "brightness": 1.0,
+      "auto_adjust": true,
+      "color": true,
+      "invert": false,
+      "edge_detection": false,
+      "sigma1": 0.5,
+      "sigma2": 0.8,
+      "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
+      "dithering": false,
+      "palette": "catppuccin",
+      "color_palette": ["#ffffff"],
+      "foreground": "#000000",
+      "background": "#ffffff"
+    }
+  }
+]

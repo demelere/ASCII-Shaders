@@ -10,6 +10,45 @@
   "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
   "dithering": false,
   "palette": "original",
+  "color_palette": ["#ffffff"],
   "foreground": "#000000",
   "background": "#ffffff"
 }
+
+// Example settings for different palettes:
+/*
+{
+  // ... other settings ...
+  "palette": "original"  // Uses original image colors
+}
+
+{
+  // ... other settings ...
+  "palette": "bw"  // Black and white
+}
+
+{
+  // ... other settings ...
+  "palette": "terminal"  // Terminal-style colors
+}
+
+{
+  // ... other settings ...
+  "palette": "amber"  // Amber monochrome
+}
+
+{
+  // ... other settings ...
+  "palette": "low_contrast"  // Low contrast grayscale
+}
+
+{
+  // ... other settings ...
+  "palette": "nord"  // Nord theme colors
+}
+
+{
+  // ... other settings ...
+  "palette": "catppuccin"  // Catppuccin theme colors
+}
+*/
