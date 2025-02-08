@@ -8,7 +8,7 @@ A Rust program that converts images to ASCII art, with support for processing mu
 - Parallel processing for faster conversion
 - Customizable settings via JSON configuration
 - Support for edge detection
-- Color preservation option
+- Multiple color palette options
 - Brightness adjustment and auto-contrast
 - Floyd-Steinberg dithering
 - Custom ASCII character sets
@@ -66,16 +66,43 @@ The program uses a JSON configuration file to customize the ASCII art conversion
 - `block_size`: Size of each ASCII character block (default: 8)
 - `brightness`: Brightness adjustment factor (default: 1.0)
 - `auto_adjust`: Enable automatic contrast adjustment (default: true)
-- `color`: Preserve original colors (default: true)
+- `color`: Preserve original colors when using "original" palette (default: true)
 - `invert`: Invert brightness values (default: false)
 - `edge_detection`: Use edge detection mode (default: false)
 - `sigma1`: Edge detection strength parameter 1 (default: 2.0)
 - `sigma2`: Edge detection strength parameter 2 (default: 2.0)
 - `ascii_chars`: String of ASCII characters to use (default: " .:-=+*#%@")
 - `dithering`: Enable Floyd-Steinberg dithering (default: false)
-- `color_palette`: Array of hex color codes for the output (default: ["#ffffff"])
+- `palette`: Color palette to use (default: "original")
 - `foreground`: Foreground color in hex (default: "#000000")
 - `background`: Background color in hex (default: "#ffffff")
+
+### Available Color Palettes
+
+The program supports several color palettes through the `palette` setting:
+
+1. `"original"`: Uses the original colors from the input image
+2. `"black_white"`: Simple black and white output
+3. `"terminal"`: Classic 16-color terminal palette
+4. `"amber"`: Vintage amber monitor look (black and amber)
+5. `"low_contrast"`: Subtle grayscale variations
+6. `"nord"`: Nord color theme with cool, arctic colors
+7. `"catppuccin"`: Catppuccin theme with soft, pastel colors
+
+To use original colors from the input image:
+```json
+{
+  "palette": "original",
+  "color": true
+}
+```
+
+For any other palette, simply set the palette name:
+```json
+{
+  "palette": "nord"
+}
+```
 
 ## Supported Image Formats
 

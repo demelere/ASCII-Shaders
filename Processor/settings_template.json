@@ -1,15 +1,15 @@
 {
-  "block_size": 8,
+  "block_size": 10,
   "brightness": 1.0,
   "auto_adjust": true,
   "color": true,
   "invert": false,
-  "edge_detection": false,
-  "sigma1": 2.0,
-  "sigma2": 2.0,
+  "edge_detection": true,
+  "sigma1": 0.5,
+  "sigma2": 0.8,
   "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
   "dithering": false,
-  "color_palette": ["#ffffff"],
+  "palette": "original",
   "foreground": "#000000",
   "background": "#ffffff"
 }
