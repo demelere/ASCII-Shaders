@@ -7,7 +7,7 @@
   "edge_detection": false,
   "sigma1": 2.0,
   "sigma2": 2.0,
-  "ascii_chars": " .:-=+*#%@",
+  "ascii_chars": " .:;-=+*#%@|=/\\coP0?■",
   "dithering": false,
   "color_palette": ["#ffffff"],
   "foreground": "#000000",
