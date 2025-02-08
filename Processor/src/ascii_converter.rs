@@ -2,10 +2,55 @@ use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 
 pub struct ColorPalette {
     pub name: &'static str,
-    pub colors: Option<Vec<[u8; 3]>>,
+    pub colors: Option<&'static [[u8; 3]]>,
     pub fg: Option<[u8; 3]>,
     pub bg: Option<[u8; 3]>,
 }
+
+const TERMINAL_COLORS: &[[u8; 3]] = &[
+    [7, 54, 66],
+    [88, 110, 117],
+    [101, 123, 131],
+    [131, 148, 150],
+    [147, 161, 161],
+    [238, 232, 213],
+    [253, 246, 227],
+];
+
+const AMBER_COLORS: &[[u8; 3]] = &[
+    [255, 176, 0],
+    [255, 192, 0],
+    [255, 208, 0],
+    [255, 224, 0],
+];
+
+const LOW_CONTRAST_COLORS: &[[u8; 3]] = &[
+    [205, 205, 205],
+    [180, 180, 180],
+    [155, 155, 155],
+    [130, 130, 130],
+];
+
+const NORD_COLORS: &[[u8; 3]] = &[
+    [216, 222, 233],
+    [229, 233, 240],
+    [236, 239, 244],
+];
+
+const CATPPUCCIN_COLORS: &[[u8; 3]] = &[
+    [245, 224, 220],
+    [242, 205, 205],
+    [245, 194, 231],
+    [203, 166, 247],
+    [243, 139, 168],
+    [235, 160, 172],
+    [250, 179, 135],
+    [249, 226, 175],
+    [166, 227, 161],
+    [148, 226, 213],
+    [137, 220, 235],
+    [116, 199, 236],
+];
 
 pub const PALETTES: &[ColorPalette] = &[
     ColorPalette {
@@ -22,66 +67,31 @@ pub const PALETTES: &[ColorPalette] = &[
     },
     ColorPalette {
         name: "terminal",
-        colors: Some(vec![
-            [7, 54, 66],
-            [88, 110, 117],
-            [101, 123, 131],
-            [131, 148, 150],
-            [147, 161, 161],
-            [238, 232, 213],
-            [253, 246, 227],
-        ]),
+        colors: Some(TERMINAL_COLORS),
         bg: Some([0, 43, 54]),
         fg: None,
     },
     ColorPalette {
         name: "amber",
-        colors: Some(vec![
-            [255, 176, 0],
-            [255, 192, 0],
-            [255, 208, 0],
-            [255, 224, 0],
-        ]),
+        colors: Some(AMBER_COLORS),
         bg: Some([0, 0, 0]),
         fg: None,
     },
     ColorPalette {
         name: "low_contrast",
-        colors: Some(vec![
-            [205, 205, 205],
-            [180, 180, 180],
-            [155, 155, 155],
-            [130, 130, 130],
-        ]),
+        colors: Some(LOW_CONTRAST_COLORS),
         bg: Some([230, 230, 230]),
         fg: None,
     },
     ColorPalette {
         name: "nord",
-        colors: Some(vec![
-            [216, 222, 233],
-            [229, 233, 240],
-            [236, 239, 244],
-        ]),
+        colors: Some(NORD_COLORS),
         bg: Some([46, 52, 64]),
         fg: None,
     },
     ColorPalette {
         name: "catppuccin",
-        colors: Some(vec![
-            [245, 224, 220],
-            [242, 205, 205],
-            [245, 194, 231],
-            [203, 166, 247],
-            [243, 139, 168],
-            [235, 160, 172],
-            [250, 179, 135],
-            [249, 226, 175],
-            [166, 227, 161],
-            [148, 226, 213],
-            [137, 220, 235],
-            [116, 199, 236],
-        ]),
+        colors: Some(CATPPUCCIN_COLORS),
         bg: Some([30, 30, 46]),
         fg: None,
     },
@@ -102,7 +112,7 @@ pub fn get_color_for_brightness(brightness: u8, palette_name: &str, original_col
 
     let palette = PALETTES.iter().find(|p| p.name == palette_name).unwrap_or(&PALETTES[0]);
 
-    if let Some(colors) = &palette.colors {
+    if let Some(colors) = palette.colors {
         let index = (brightness as f32 / 255.0 * (colors.len() - 1) as f32) as usize;
         colors[index.min(colors.len() - 1)]
     } else if let (Some(fg), Some(bg)) = (palette.fg, palette.bg) {
