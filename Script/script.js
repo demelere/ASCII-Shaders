@@ -60,13 +60,13 @@ const DITHER_ALGORITHMS = {
       this.dragArea = document.getElementById("dragArea");
       this.fileInput = document.getElementById("imageInput");
   
-      this.blockSize = 8;
+      this.blockSize = 10;
       this.brightness = 1.0;
       this.autoAdjust = true;
-      this.detectEdges = false;
+      this.detectEdges = true;
       this.color = true;
       this.invertColor = false;
-      this.asciiChars = " .:-=+*#%@";
+      this.asciiChars = " .:;-=+*#%@|=/\\coP0?■";
       this.sigma1 = 0.5;
       this.sigma2 = 1.0;
       this.ditherAlgo = "none";
