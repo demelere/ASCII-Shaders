@@ -260,6 +260,17 @@ button.primary:hover {
     background: var(--accent-hover);
 }
 
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.processing button {
+    background: var(--accent);
+    color: var(--text-primary);
+}
+
 .output-card {
     display: flex;
     align-items: center;

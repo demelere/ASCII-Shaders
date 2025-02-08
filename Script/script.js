@@ -77,6 +77,11 @@ const DITHER_ALGORITHMS = {
       // error diffusion
       this.errorBuffer = null;
   
+      this.pendingFiles = [];
+      this.isDirectory = false;
+      this.copyBtn = document.getElementById("copyBtn");
+      this.downloadBtn = document.getElementById("downloadBtn");
+  
       this.setupEventListeners();
     }
   
@@ -92,9 +97,26 @@ const DITHER_ALGORITHMS = {
       this.dragArea.addEventListener("drop", (e) => {
         e.preventDefault();
         this.dragArea.style.borderColor = "var(--border-color)";
+        
+        // Handle items from the drop
+        const items = e.dataTransfer.items;
+        if (items) {
+            // If directory is dropped, process all entries
+            const entry = items[0].webkitGetAsEntry();
+            if (entry && entry.isDirectory) {
+                this.isDirectory = true;
+                this.pendingFiles = [];
+                this.processDirectory(entry);
+                return;
+            }
+        }
+
+        // Handle single file drop (existing behavior)
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith("image/")) {
-          this.handleFile(file);
+            this.isDirectory = false;
+            this.pendingFiles = [];
+            this.handleFile(file);
         }
       });
   
@@ -158,9 +180,13 @@ const DITHER_ALGORITHMS = {
         if (this.originalImage) this.generate();
       });
   
-      document
-        .getElementById("downloadBtn")
-        .addEventListener("click", () => this.downloadImage());
+      this.downloadBtn.addEventListener("click", () => {
+        if (this.isDirectory && this.pendingFiles.length > 0) {
+            this.processAllFiles();
+        } else {
+            this.downloadImage();
+        }
+      });
   
       document.getElementById("ditherAlgo").addEventListener("change", (e) => {
         this.ditherAlgo = e.target.value;
@@ -196,7 +222,7 @@ const DITHER_ALGORITHMS = {
         .addEventListener("click", () => this.copyImage());
     }
   
-    async handleFile(file) {
+    async handleFile(file, isPreview = false) {
       const img = new Image();
       img.src = URL.createObjectURL(file);
       await new Promise((resolve) => (img.onload = resolve));
@@ -674,6 +700,106 @@ const DITHER_ALGORITHMS = {
       }
   
       return new ImageData(data, width, height);
+    }
+  
+    async processDirectory(entry) {
+      const dirReader = entry.createReader();
+      
+      const readEntries = () => {
+        dirReader.readEntries(async (entries) => {
+          if (entries.length === 0) {
+            this.updateUIForBatchProcessing();
+            return;
+          }
+
+          for (const entry of entries) {
+            if (entry.isFile) {
+              const file = await this.getFileFromEntry(entry);
+              if (file.type.startsWith("image/")) {
+                this.pendingFiles.push(file);
+              }
+            }
+          }
+
+          // Continue reading (handles directory with over 100 entries)
+          readEntries();
+        });
+      };
+
+      readEntries();
+    }
+
+    getFileFromEntry(entry) {
+      return new Promise((resolve) => {
+        entry.file(resolve);
+      });
+    }
+
+    updateUIForBatchProcessing() {
+      if (this.pendingFiles.length > 0) {
+        this.copyBtn.disabled = true;
+        this.downloadBtn.textContent = `Process ${this.pendingFiles.length} Images`;
+        // Show a preview of the first image
+        this.handleFile(this.pendingFiles[0], true);
+      }
+    }
+
+    async processAllFiles() {
+        this.downloadBtn.disabled = true;
+        this.downloadBtn.textContent = "Processing...";
+
+        // Create a directory picker
+        try {
+            // Show directory picker
+            const dirHandle = await window.showDirectoryPicker();
+            
+            // Process each file
+            for (const file of this.pendingFiles) {
+                await this.processAndSaveFile(file, dirHandle);
+            }
+
+            this.downloadBtn.disabled = false;
+            this.downloadBtn.textContent = "Done!";
+            setTimeout(() => {
+                this.downloadBtn.textContent = "Download";
+                this.isDirectory = false;
+                this.pendingFiles = [];
+                this.copyBtn.disabled = false;
+            }, 2000);
+        } catch (err) {
+            // Handle if user cancels directory selection
+            console.error('Directory selection cancelled or failed:', err);
+            this.downloadBtn.disabled = false;
+            this.downloadBtn.textContent = "Download";
+            this.copyBtn.disabled = false;
+        }
+    }
+
+    async processAndSaveFile(file, dirHandle) {
+        // Process the image
+        await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = async () => {
+                this.originalImage = img;
+                await this.generate();
+                
+                // Get the processed image data
+                const blob = await new Promise(resolve => this.canvas.toBlob(resolve));
+                
+                // Save to the selected directory
+                try {
+                    const newFileHandle = await dirHandle.getFileHandle(`ascii-${file.name}`, { create: true });
+                    const writable = await newFileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                } catch (err) {
+                    console.error('Error saving file:', err);
+                }
+                
+                resolve();
+            };
+            img.src = URL.createObjectURL(file);
+        });
     }
   }
   
